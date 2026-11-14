@@ -48,6 +48,7 @@
 (з правого боку звʼязку - дзеркально: ||, o|, |{, o{).
 -->
 
+```mermaid
  erDiagram
     Категорія ||--o{ Пряжа : "містить" 
     Бренд ||--o{ Пряжа : "виробляє" 
@@ -103,7 +104,8 @@
         текст артикул PK
         число кількість
         число ціна_продажу
-    }   
+    }
+```
 
 ### Сутності
 
@@ -220,6 +222,7 @@
 Типи PostgreSQL без параметрів (numeric, а не numeric(8, 2)). Ключі: PK, FK, «PK, FK».
 -->
 
+```mermaid
 erDiagram
     categories ||--o{ yarns : "contains"
     brands ||--o{ yarns : "produces"
@@ -267,6 +270,7 @@ erDiagram
         integer quantity
         numeric unit_price
     }
+```
 
 ## 7. Середовище
 
