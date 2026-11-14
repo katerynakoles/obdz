@@ -292,7 +292,11 @@ docker compose ps
 ## 8. Створення схеми
 
 - Міграція 001: [migrations/001_create_schema.up.sql](migrations/001_create_schema.up.sql), [migrations/001_create_schema.down.sql](migrations/001_create_schema.down.sql)
-- Рішення, яких не видно з діаграми: умови CHECK, реакції на видалення, стовпці ідентичності.
+- Рішення, яких не видно з діаграми:
+- Для таблиць `categories, brands, customers, orders` використано стовпці ідентичності `GENERATED ALWAYS AS IDENTITY`.
+- Для цін та ваги задано обмеження CHECK (`price > 0, weight_grams > 0, length_meters > 0, stock_quantity >= 0, quantity > 0`).
+- Статус замовлення обмежено переліком допустимих значень через `CHECK (status IN (...)`).
+- Реакції на видалення: `ON DELETE CASCADE` для `order_items` при видаленні замовлення та `ON DELETE RESTRICT` для всіх інших зовнішніх ключів.
 
 ## 9. Перевірка обмежень
 
