@@ -1,3 +1,4 @@
+-- Додавання обмежень UNIQUE на потенційні ключі для ідемпотентного повторного завантаження даних
 ALTER TABLE categories
     ADD CONSTRAINT categories_category_name_key UNIQUE (category_name);
 
