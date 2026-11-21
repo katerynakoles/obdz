@@ -2,7 +2,7 @@
 
 Виконавець: Колеснікова Катерина, СТСА-25-1
 
-Предметна область: назва.
+Предметна область: Магазин пряжі та товарів для в’язання
 
 <!--
 Шаблон звіту. Скопіювати як lab-02/README.md і заповнити всі розділи.
@@ -14,9 +14,16 @@
 
 <!-- Для кожної таблиці - обмеження, яке не пускає повторний рядок. Для таблиці із сурогатним ключем - UNIQUE на потенційному ключі. -->
 
-| Таблиця | Обмеження | Стовпці ON CONFLICT |
+| Таблиця | Обмеження для повторного завантаження | Стовпці `ON CONFLICT` |
 |---|---|---|
-| `table_name` | `table_name_pkey` / `..._key` | `(column_name)` |
+| `categories` | `UNIQUE (categories_category_name_key)` — додається міграцією | `(category_name)` |
+| `brands` | `UNIQUE (brands_brand_name_key)` — додається міграцією | `(brand_name)` |
+| `suppliers` | `UNIQUE (suppliers_phone_key)` — додається міграцією | `(phone)` |
+| `shipments` | `UNIQUE (shipments_invoice_number_key)` — вже є в схемі | `(invoice_number)` |
+| `customers` | `UNIQUE (customers_phone_key)` — вже є в схемі | `(phone)` |
+| `yarns` | `PRIMARY KEY (yarns_pkey)` | `(sku)` |
+| `orders` | `UNIQUE (orders_customer_created_key)` — додається міграцією | `(customer_id, created_at)` |
+| `order_items` | `PRIMARY KEY (order_items_pkey)` | `(order_id, sku)` |
 
 Зміна схеми: не потрібна / міграція [migrations/002_....up.sql](migrations/002_....up.sql), [migrations/002_....down.sql](migrations/002_....down.sql).
 
