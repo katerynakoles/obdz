@@ -65,59 +65,118 @@
 
 | № | Питання замовника | Використані конструкції | Рядків |
 |---|---|---|---|
-| 1 | ... | ... | ... |
-| 2 | ... | ... | ... |
-| 3 | ... | ... | ... |
-| 4 | ... | ... | ... |
-| 5 | ... | ... | ... |
-| 6 | ... | ... | ... |
+| 1 | Які позиції пряжі коштують від 80 до 150 грн та мають на складі 20 і більше мотків? | `SELECT sku, yarn_name, price, stock_quantity
+FROM yarns
+WHERE price BETWEEN 80.00 AND 150.00
+  AND stock_quantity >= 20
+ORDER BY price DESC, sku ASC;` | 2 |
+| 2 | Які замовлення мають статус 'new' або 'paid' і створені у вересні або жовтні 2026 року? | `SELECT order_id, customer_id, created_at, status
+FROM orders
+WHERE status IN ('new', 'paid')
+  AND created_at >= '2026-09-01 00:00:00'
+  AND created_at < '2026-11-01 00:00:00'
+ORDER BY created_at ASC, order_id ASC;` | 2 |
+| 3 | Які артикули пряжі мають у назві літери 'a' (з урахуванням регістру) і чи належать до категорії 1 або мають ціну понад 180 грн? | `SELECT sku, yarn_name, category_id, price
+FROM yarns
+WHERE yarn_name LIKE '%a%'
+  AND (category_id = 1 OR price > 180.00)
+ORDER BY sku ASC;` | 2 |
+| 4 | Які клієнти мають вказану електронну пошту та номер телефону починається з '050'? | `SELECT customer_id, full_name, phone, email
+FROM customers
+WHERE email IS NOT NULL
+  AND phone LIKE '050%'
+ORDER BY customer_id ASC;` | 2 |
+| 5 | Які 3 найдорожчі позиції пряжі в каталозі? | `SELECT sku, yarn_name, price
+FROM yarns
+ORDER BY price DESC, sku ASC
+LIMIT 3;` | 3 |
+| 6 | Які замовлення оформлено у вересні 2026 року (напівінтервал за часом)? | `SELECT order_id, customer_id, created_at, status
+FROM orders
+WHERE created_at >= '2026-09-01 00:00:00'
+  AND created_at < '2026-10-01 00:00:00'
+ORDER BY created_at ASC, order_id ASC;` | 2 |
 
 ### Запити з NULL
 
 ```sql
--- запит, який губить рядки з NULL; рядків: ...
+запит, який губить рядки з NULL; рядків: 1
+SELECT customer_id, full_name, email
+FROM customers
+WHERE email NOT LIKE '%kovalenko%'
+   OR email IS NULL
+ORDER BY customer_id ASC;
 ```
 
 ```sql
--- виправлений запит; рядків: ...
+виправлений запит; рядків: 3
+SELECT customer_id, full_name, email
+FROM customers
+WHERE email NOT LIKE '%kovalenko%'
+   OR email IS NULL
+ORDER BY customer_id ASC;
 ```
 
-Пояснення трозначною логікою: ...
+Пояснення трозначною логікою: У SQL предикат повертає `TRUE`, `FALSE` або `UNKNOWN`. Для рядків, де `email дорівнює NULL`, вираз `email NOT LIKE '%kovalenko%'` дає `UNKNOWN`, а `WHERE` відбирає лише рядки зі значенням `TRUE`. Тому рядки з `NULL` зникають без явної умови `OR email IS NULL`
 
 ## 5. Запити зі зʼєднанням таблиць
 
-### Зʼєднання 1. Внутрішнє зʼєднання двох таблиць
+### Зʼєднання 1. які замовлення оформлені якими клієнтами?
 
 ```sql
--- запит
+SELECT o.order_id, o.created_at, o.status, c.customer_id, c.full_name
+FROM orders AS o
+JOIN customers AS c ON c.customer_id = o.customer_id
+ORDER BY o.order_id ASC;
 ```
 
-Рядків: ... Чому саме стільки: ...
+Рядків: 4 Чому саме стільки: усі 4 замовлення мають обов'язкового клієнта customer_id NOT NULL із REFERENCES
 
-### Зʼєднання 2. Таблиці «поганої» таблиці роботи №1
+### Зʼєднання 2. з'єднання таблиць замовлень, позицій та пряжі за ключами
 
 ```sql
--- запит
+SELECT
+    o.order_id,
+    o.created_at,
+    c.customer_id,
+    c.full_name,
+    c.phone,
+    y.sku,
+    y.yarn_name,
+    b.brand_name,
+    cat.category_name,
+    oi.quantity,
+    oi.unit_price
+FROM order_items AS oi
+JOIN orders AS o ON o.order_id = oi.order_id
+JOIN customers AS c ON c.customer_id = o.customer_id
+JOIN yarns AS y ON y.sku = oi.sku
+JOIN brands AS b ON b.brand_id = y.brand_id
+JOIN categories AS cat ON cat.category_id = y.category_id
+ORDER BY o.order_id ASC, y.sku ASC;
 ```
 
-Рядків: ... Чому саме стільки: ...
+Рядків: 10 Чому саме стільки: по одному рядку на кожну позицію замовлення в order_items
+
+### Зʼєднання 3. яякі клієнти ще не оформили жодного замовлення?
+
+```sql
+SELECT c.customer_id, c.full_name, c.phone
+FROM customers AS c
+LEFT JOIN orders AS o ON o.customer_id = c.customer_id
+WHERE o.order_id IS NULL
+ORDER BY c.customer_id ASC;
+```
+
+Рядків: 1 Чому саме стільки: клієнтка Софія Ткаченко, customer_id = 4, не має рядків у orders
 
 Логічний порядок виконання:
 
-1. FROM і JOIN: ...
-2. WHERE: ...
-3. SELECT: ...
-4. ORDER BY і LIMIT: ...
+1. FROM і JOIN: спочатку з'єднують `order_items` з `orders, customers, yarns, brands` і `categories` за парами «зовнішній ключ = первинний ключ». Оскільки зовнішні ключі мають `NOT NULL` і `REFERENCES`, кожен із 10 рядків `order_items` знаходить рівно одну пару без дублювання
+2. WHERE: (якщо є) відфільтрувало б рядки (тут його немає)
+3. SELECT: формує вибірку потрібних стовпців
+4. ORDER BY: упорядковує результат за `o.order_id` та `y.sku`
 
-Порівняння з «поганою» таблицею роботи №1: ...
-
-### Зʼєднання 3. Рядки без пари
-
-```sql
--- запит
-```
-
-Рядків: ... Чому саме стільки: ...
+Порівняння з «поганою» таблицею роботи №1: тут немає повторення контактів чи назв брендів/категорій у кожному рядку на рівні сирих даних, але з'єднання повертає повний розріз кожної проданої позиції по одному рядку на позицію замовлення
 
 ## 6. Зміна і видалення даних
 
