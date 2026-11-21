@@ -61,3 +61,40 @@ FROM customers
 WHERE email NOT LIKE '%kovalenko%'
    OR email IS NULL
 ORDER BY customer_id ASC;
+
+-- З'єднання 1 (INNER JOIN): які замовлення оформлені якими клієнтами?
+-- Рядків: 4 (усі 4 замовлення мають обов'язкового клієнта customer_id NOT NULL із REFERENCES)
+SELECT o.order_id, o.created_at, o.status, c.customer_id, c.full_name
+FROM orders AS o
+JOIN customers AS c ON c.customer_id = o.customer_id
+ORDER BY o.order_id ASC;
+
+-- З'єднання 2 (з'єднання таблиць замовлень, позицій та пряжі за ключами):
+-- Рядків: 10 (по одному рядку на кожну позицію замовлення в order_items)
+SELECT
+    o.order_id,
+    o.created_at,
+    c.customer_id,
+    c.full_name,
+    c.phone,
+    y.sku,
+    y.yarn_name,
+    b.brand_name,
+    cat.category_name,
+    oi.quantity,
+    oi.unit_price
+FROM order_items AS oi
+JOIN orders AS o ON o.order_id = oi.order_id
+JOIN customers AS c ON c.customer_id = o.customer_id
+JOIN yarns AS y ON y.sku = oi.sku
+JOIN brands AS b ON b.brand_id = y.brand_id
+JOIN categories AS cat ON cat.category_id = y.category_id
+ORDER BY o.order_id ASC, y.sku ASC;
+
+-- З'єднання 3 (LEFT JOIN з IS NULL): які клієнти ще не оформили жодного замовлення?
+-- Рядків: 1 (клієнтка Софія Ткаченко, customer_id = 4, не має рядків у orders)
+SELECT c.customer_id, c.full_name, c.phone
+FROM customers AS c
+LEFT JOIN orders AS o ON o.customer_id = c.customer_id
+WHERE o.order_id IS NULL
+ORDER BY c.customer_id ASC;
