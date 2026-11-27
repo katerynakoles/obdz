@@ -125,7 +125,10 @@ ORDER BY d.order_day;
 Запит заміру:
 
 ```sql
--- EXPLAIN ANALYZE ...
+EXPLAIN ANALYZE
+SELECT order_id, created_at, status
+FROM orders
+WHERE customer_id = 500;
 ```
 
 | Показник | До індексу | Після індексу |
@@ -137,6 +140,10 @@ ORDER BY d.order_day;
 Міграція індексу: [migrations/003_....up.sql](migrations/003_....up.sql), [migrations/003_....down.sql](migrations/003_....down.sql). Цикл up - down - up: ...
 
 Ціна індексу: розмір таблиці ... , розмір індексу ... (скрипт [table-size.sql](table-size.sql)); друга складова ціни: ...
+
+Умова з <>: SELECT * FROM orders WHERE customer_id <> 500; (відбирає майже всю таблицю, тому послідовне сканування вигідніше).
+
+Пошук за текстом із початковим % (наприклад, за артикулом/назвою): SELECT * FROM yarns WHERE yarn_name LIKE '%Wool'; (B-tree індекс не працює з провідним %).
 
 ### Запити, яким індекс не допоміг
 
@@ -183,6 +190,33 @@ ORDER BY d.order_day;
 
 ```mermaid
 erDiagram
+    dim_yarns ||--o{ fact_yarn_sales : "has_sales"
+    dim_dates ||--o{ fact_yarn_sales : "occurs_on"
+
+    dim_yarns {
+        integer yarn_key PK
+        text sku
+        text yarn_name
+        text composition
+        text color_code
+        text brand_name
+        text category_name
+    }
+    dim_dates {
+        date date_key PK
+        integer year_number
+        text month_label
+        integer day_of_week
+        boolean is_weekend
+    }
+    fact_yarn_sales {
+        integer order_id PK
+        text sku PK
+        integer yarn_key FK
+        date date_key FK
+        integer sold_quantity
+        numeric line_amount
+    }
 ```
 
 Денормалізація виміру: який стовпець повторюється, чому це не загрожує аномаліями оновлення і чим відрізняється від робочої бази: ...
