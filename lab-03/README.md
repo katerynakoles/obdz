@@ -18,52 +18,103 @@
 
 | № | Питання замовника | Використані конструкції | Результат |
 |---|---|---|---|
-| 1 | ... | ... | ... |
-| 2 | ... | ... | ... |
-| 3 | ... | ... | ... |
-| 4 | ... | ... | ... |
-| 5 | ... | ... | ... |
-| 6 | група без жодної події | LEFT JOIN, GROUP BY, count(стовпця) | ... |
+| 1 | Яка загальна виручка за завершеними та оплаченими замовленнями (статуси 'completed' або 'paid')? | ... | ... |
+| 2 | Які категорії пряжі у вересні 2026 року мали суму продажів понад 600.00 грн (WHERE + GROUP BY + HAVING)? | ... | ... |
+| 3 | Скільки всього позицій замовлень і скільки з них належать до замовлень у статусі 'completed' (CASE усередині агрегатної функції)? | ... | ... |
+| 4 | Яка середня сума одного замовлення за даними підзапиту у FROM? | ... | ... |
+| 5 | Яка кількість мотків продана за кожним статусом замовлення? | ... | ... |
+| 6 | Скільки поставок здійснив кожен постачальник, разом із постачальниками без поставок? | LEFT JOIN, GROUP BY, count(стовпця) | ... |
 
-Що станеться, якщо умову з HAVING перенести у WHERE: ...
+Якщо перенести умову з `HAVING` у `WHERE`, запит поверне помилку агрегації в WHERE, оскільки WHERE фільтрує окремі рядки до групування `(GROUP BY)`, а `HAVING` — вже сформовані групи після нього.
 
-Чому `count(*)` для групи без подій дає 1, а `count(стовпця)` - 0: ...
+У Запиті 6 `count(*)` після `LEFT JOIN` для рядка без збігів порахував би сам рядок з'єднання з `NULL` праворуч і дав би 1, тоді як `count(sh.shipment_id)` рахує лише не-`NULL` значення стовпця правої таблиці та повертає 0.
 
 ## 2. Віконні функції
 
 Файл: [window-queries.sql](window-queries.sql)
 
-### Запит 1. Ранжування
+### Запит 1. (ранжування з нічиєю). Рейтинг артикулів пряжі за загальною кількістю проданих мотків
 
 ```sql
--- запит
+SELECT
+    y.sku,
+    y.yarn_name,
+    sum(oi.quantity) AS total_sold_skeins,
+    rank() OVER (ORDER BY sum(oi.quantity) DESC, y.sku ASC) AS rank_pos,
+    dense_rank() OVER (ORDER BY sum(oi.quantity) DESC, y.sku ASC) AS dense_rank_pos,
+    row_number() OVER (ORDER BY sum(oi.quantity) DESC, y.sku ASC) AS row_num_pos
+FROM yarns AS y
+JOIN order_items AS oi ON oi.sku = y.sku
+GROUP BY y.sku, y.yarn_name
+ORDER BY rank_pos, y.sku;
 ```
 
-Результат: ... Нічия: ... Місця за `rank`, `dense_rank` і `row_number`: ... Обрано функцію ... , бо ...
+Результат: 
+YR-002	Jeans	18	1	1	1
+YR-004	Baby Wool	10	2	2	2
+YR-003	Lima	8	3	3	3
+YR-001	Lanagold 800	6	4	4	4
 
-### Запит 2. Накопичувальний підсумок
+### Запит 2. (накопичувальний підсумок за днями). Накопичувальна сума продажів по днях
 
 ```sql
--- запит
+SELECT
+    d.order_day,
+    d.daily_revenue,
+    sum(d.daily_revenue) OVER (ORDER BY d.order_day) AS running_revenue
+FROM (
+    SELECT
+        CAST(o.created_at AS date) AS order_day,
+        sum(oi.quantity * oi.unit_price) AS daily_revenue
+    FROM orders AS o
+    JOIN order_items AS oi ON oi.order_id = o.order_id
+    GROUP BY CAST(o.created_at AS date)
+) AS d
+ORDER BY d.order_day;
 ```
 
-Результат: ...
+Результат: 2026-09-15	1265.00	1265.00
+2026-09-30	1275.00	2540.00
+2026-10-03	1290.00	3830.00
+2026-10-12	770.00	4600.00
 
-### Запит 3. Ковзне середнє
+### Запит 3. (ковзне середнє за 3 рядками). Ковзне середнє кількості проданих мотків за останні 3 дні з продажами
+SELECT
 
 ```sql
--- запит
+SELECT
+    d.order_day,
+    d.daily_skeins,
+    round(
+        avg(d.daily_skeins) OVER (
+            ORDER BY d.order_day
+            ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+        ),
+        2
+    ) AS moving_avg_skeins
+FROM (
+    SELECT
+        CAST(o.created_at AS date) AS order_day,
+        sum(oi.quantity) AS daily_skeins
+    FROM orders AS o
+    JOIN order_items AS oi ON oi.order_id = o.order_id
+    GROUP BY CAST(o.created_at AS date)
+) AS d
+ORDER BY d.order_day;
 ```
 
 | Рядок | Значення | Дні, що ввійшли в рамку |
 |---|---|---|
-| ... | ... | ... |
-
-Чому це не «середнє за три календарні дні»: ...
+| 1 | 13 | 2026-09-15 |
+| 2 | 11 | 2026-09-15, 2026-10-30 |
+| 3 | 10,67 | 2026-09-15, 2026-10-30, 2026-10-03 |
+| 4 | 9,67 | 2026-09-15, 2026-10-30, 2026-10-03, 2026-10-12 |
 
 ### Вікно проти групування
 
-Скільки рядків повертає запит із вікном і скільки - той самий розріз через GROUP BY; що видно лише у варіанті з вікном: ...
+Віконні функції не згортають рядки на відміну від `GROUP BY` — кожен рядок залишається окремим записом із додатковим розрахунком у вікні.
+
+Рамка `ROWS BETWEEN 2 PRECEDING AND CURRENT ROW` бере поточний рядок і до двох попередніх рядків у відсортованому вікні (тобто дні з продажами, а не обов'язково календарні дні підряд, якщо між ними були дні без замовлень)
 
 ## 3. Дослід з індексом
 
