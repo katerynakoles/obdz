@@ -1,3 +1,2 @@
--- Скасування міграції 003_add_orders_customer_id_idx.up.sql
-
-DROP INDEX orders_customer_id_idx;
+-- Створення індексу за зовнішнім ключем customer_id у таблиці orders
+CREATE INDEX orders_customer_id_idx ON orders (customer_id);
