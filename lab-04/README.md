@@ -189,7 +189,26 @@ db.order_line_events.aggregate([
 Результат:
 
 ```text
-...
+{
+  _id: 'YR-003',
+  positions_count: 2,
+  total_revenue: 1560
+}
+{
+  _id: 'YR-002',
+  positions_count: 3,
+  total_revenue: 1375
+}
+{
+  _id: 'YR-004',
+  positions_count: 3,
+  total_revenue: 1335
+}
+{
+  _id: 'YR-001',
+  positions_count: 2,
+  total_revenue: 850
+}
 ```
 
 | Крок конвеєра | Відповідник у SQL |
