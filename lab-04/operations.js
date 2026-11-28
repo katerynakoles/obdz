@@ -54,10 +54,10 @@ db.order_line_events.updateOne(
 )
 
 // 5. deleteOne: видалити помилково/тимчасово додану позицію замовлення №5.
-// Кількість документів до видалення: [вставити countDocuments() до]
-// Очікуваний результат: deletedCount: 1.
+// Кількість документів до видалення: 10
+// Очікуваний результат: deletedCount: 1
 // Фактичний результат: 
 db.order_line_events.countDocuments()
 db.order_line_events.deleteOne({ _id: { order_id: 5, sku: "YR-005" } })
 db.order_line_events.countDocuments()
-// Кількість документів після видалення: [вставити countDocuments() після]
+// Кількість документів після видалення: 10
