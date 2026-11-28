@@ -284,12 +284,12 @@ db.yarn_catalog.insertOne({
 
 | № | Команда | Відповідь |
 |---|---|---|
-| 1	| SET revenue:2026-09 | 2540.00	OK
+| 1	| SET revenue:2026-09 2540.00	| OK
 | 2	| GET revenue:2026-09	| "2540.00"
-| 3 | TTL revenue:2026-09	| (integer) -1
-| 4 | EXPIRE revenue:2026-09 25	| (integer) 1
-| 5 | TTL revenue:2026-09	| [вставити число, наприклад (integer) 22]
-| 6 | EXISTS revenue:2026-09	| (integer) 1
+| 3 | TTL revenue:2026-09	(integer) | -1
+| 4 | EXPIRE revenue:2026-09 25 (integer) | 1
+| 5 | TTL revenue:2026-09	| -2]
+| 6 | EXISTS revenue:2026-09 (integer) | 1
 | 7 | GET revenue:2026-09 (після 25 с) | (nil)
 | 8 | TTL revenue:2026-09 (integer) | -2
 | 9 | SET revenue:2026-09 2540.00 EX 25 | OK
